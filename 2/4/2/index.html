@@ -2575,50 +2575,75 @@ function renderVault(items) {
 /* TABLE DES CODES */
 
 function getRewardForCode(code) {
-  // 242 = coffre fort
+  // 242 = coffre fort (exemple sans média intégré)
   if (code === "242") {
     return {
       code,
       title: "Coffre fort débloqué",
-      body: "Tu as trouvé la combinaison 242. Dans un futur pas si lointain, ce coffre servira à stocker de vrais artefacts (PDF, images, extraits de jeux, etc.).",
-      preview: "Aperçu factice : visualisation de ton coffre, stats de progression, inventaire complet de tes trouvailles.",
-      footer: "Cette entrée a été ajoutée à ton coffre fort. Tu peux la retrouver via le bouton Coffre fort.",
-      tag: "Coffre"
+      body: "Tu as trouvé la combinaison 242. Ce coffre servira à stocker de vrais artefacts (PDF, images, extraits de jeux, etc.).",
+      preview: "Ici tu peux mettre une description courte de ce que contient le coffre.",
+      footer: "Cette entrée est ajoutée au coffre fort. Tu peux la retrouver via le bouton Coffre fort.",
+      tag: "Coffre",
+      mediaType: null,
+      mediaSrc: null
     };
   }
 
+  // EXEMPLE : code 125 affiche un VRAI PDF docs/dossier-125.pdf
   if (code === "125") {
     return {
       code,
       title: "Dossier 12,50 – Aperçu classé secret",
-      body: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin dignissim, mauris eu vestibulum auctor, sem nulla posuere massa, vitae lobortis sem justo non lorem.",
-      preview: "Aperçu factice : capture de dossier ultra confidentiel, graphiques d’impact, timeline de l’expérience 12,50.",
-      footer: "Encore une récompense purement cosmétique pour l’instant… mais qui pourra servir de placeholder à un vrai contenu.",
-      tag: "Dossier"
+      body: "Dossier réel sur le projet 12,50. Tu peux le lire directement dans la fenêtre ou l’ouvrir dans un nouvel onglet.",
+      preview: "Lecteur intégré du PDF ‘dossier-125.pdf’.",
+      footer: "Ce code pointe vers un vrai PDF dans /docs/dossier-125.pdf.",
+      tag: "Dossier",
+      mediaType: "pdf",
+      mediaSrc: "docs/dossier-125.pdf"
     };
   }
 
+  // EXEMPLE : code 777 affiche une image img/galaxie-secrete.png
   if (code === "777") {
     return {
       code,
-      title: "Jackpot pédagogique",
-      body: "Suspendisse potenti. Sed posuere, ex in consequat tempus, lectus diam suscipit odio, eget viverra augue arcu sed elit.",
-      preview: "Aperçu factice : vidéo tutorielle, cheat sheet ou guide ultra simplifié qui s’affichera ici un jour.",
-      footer: "Jackpot symbolique. Le coffre garde ça bien au chaud pour une prochaine itération du jeu.",
-      tag: "Jackpot"
+      title: "Carte galactique secrète",
+      body: "Une image réelle stockée dans /img/galaxie-secrete.png. Parfait pour un plan, un schéma, une affiche, etc.",
+      preview: "Aperçu de l’image ‘galaxie-secrete.png’.",
+      footer: "Tu peux changer cette image par n’importe quel visuel sans toucher au reste du jeu.",
+      tag: "Image",
+      mediaType: "image",
+      mediaSrc: "img/galaxie-secrete.png"
     };
   }
 
-  // code générique factice
+  // EXEMPLE : code 999 affiche un lien externe (vidéo, site, etc.)
+  if (code === "999") {
+    return {
+      code,
+      title: "Lien externe (YouTube, site, etc.)",
+      body: "Ce code ouvre un lien externe, par exemple une vidéo YouTube, une autre page du site, etc.",
+      preview: "Clique sur le lien ci-dessous pour ouvrir la ressource.",
+      footer: "C’est pratique pour brancher le jeu sur ton écosystème existant.",
+      tag: "Lien",
+      mediaType: "link",
+      mediaSrc: "https://example.com/ton-lien" // à remplacer
+    };
+  }
+
+  // code générique (pour tester sans tout prévoir)
   return {
     code,
     title: "Récompense générique",
-    body: "Code inconnu mais accepté. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras interdum, ipsum in convallis pulvinar, sapien libero semper est.",
-    preview: "Aperçu factice : tu pourras mapper ce code vers n’importe quel contenu (PDF, image, page web…).",
-    footer: "Même les codes non prévus sont stockés dans le coffre. Tu pourras décider plus tard de ce qu’ils débloquent vraiment.",
-    tag: "Custom"
+    body: "Code inconnu mais accepté. Tu pourras plus tard lui associer un vrai contenu.",
+    preview: "Pour l’instant, c’est un placeholder. Mais tu peux lui assigner un PDF, une image ou un lien.",
+    footer: "Même les codes pas encore mappés sont stockés dans le coffre.",
+    tag: "Custom",
+    mediaType: null,
+    mediaSrc: null
   };
 }
+
 
 /* LOGIQUE CODE SECRET */
 
@@ -2636,13 +2661,60 @@ slotPill.addEventListener("click", () => {
 });
 
 function openRewardModal(reward) {
-  rewardTitleEl.textContent = reward.title;
-  rewardCodeEl.textContent = "Code : " + reward.code;
-  rewardBodyEl.textContent = reward.body;
-  rewardPreviewEl.textContent = reward.preview;
+  // Texte classique
+  rewardTitleEl.textContent  = reward.title;
+  rewardCodeEl.textContent   = "Code : " + reward.code;
+  rewardBodyEl.textContent   = reward.body;
   rewardFooterEl.textContent = reward.footer;
+
+  // On vide ce qu’il y avait avant dans la zone d’aperçu
+  rewardPreviewEl.innerHTML = "";
+
+  // Selon le type de média, on affiche différemment
+  if (reward.mediaType === "image" && reward.mediaSrc) {
+    // IMAGE
+    rewardPreviewEl.innerHTML = `
+      <figure style="margin:0;">
+        <img src="${reward.mediaSrc}"
+             alt="${reward.title}"
+             style="max-width:100%;border-radius:8px;display:block;margin-bottom:6px;">
+        <figcaption style="font-size:10px;opacity:.7;">
+          ${reward.preview}
+        </figcaption>
+      </figure>
+    `;
+  } else if (reward.mediaType === "pdf" && reward.mediaSrc) {
+    // PDF intégré
+    rewardPreviewEl.innerHTML = `
+      <iframe src="${reward.mediaSrc}"
+              style="width:100%;height:260px;border-radius:8px;border:1px solid rgba(148,163,184,.6);">
+      </iframe>
+      <div style="font-size:10px;margin-top:4px;">
+        ${reward.preview}<br>
+        Si le lecteur ne s'affiche pas, 
+        <a href="${reward.mediaSrc}" target="_blank" rel="noopener">ouvre le PDF dans un nouvel onglet</a>.
+      </div>
+    `;
+  } else if (reward.mediaType === "link" && reward.mediaSrc) {
+    // LIEN externe
+    rewardPreviewEl.innerHTML = `
+      <div style="font-size:11px;">
+        ${reward.preview}<br><br>
+        <a href="${reward.mediaSrc}" target="_blank" rel="noopener"
+           style="display:inline-block;margin-top:4px;padding:6px 10px;border-radius:999px;
+                  border:1px solid rgba(148,163,184,.8);text-decoration:none;font-size:11px;">
+          Ouvrir la ressource
+        </a>
+      </div>
+    `;
+  } else {
+    // Pas de média particulier -> texte simple
+    rewardPreviewEl.textContent = reward.preview;
+  }
+
   overlayReward.style.display = "flex";
 }
+
 
 rewardClose.addEventListener("click", () => {
   overlayReward.style.display = "none";
