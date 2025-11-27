@@ -981,7 +981,7 @@ svg {
   box-shadow: 0 10px 30px rgba(15,23,42,0.9);
 }
 
-/* OVERLAY RÉCOMPENSE CODE */
+/* OVERLAY RÉCOMPENSE CODE & COFFRE */
 
 .overlay-reward,
 .overlay-vault {
@@ -1459,6 +1459,8 @@ function openPortal(mode) {
 btnEnter.addEventListener("click", () => {
   overlay.style.display = "none";
   slotSection.style.display = "block";
+  // petit scroll pour garantir que le slot est visible
+  slotSection.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 setTimeout(() => {
   if (!unlocked) {
@@ -1845,7 +1847,8 @@ modeButtons.forEach(btn => {
 
 eventButtons.forEach(btn => {
   const ev = btn.getAttribute("data-event");
-  if (!ev) return; // le bouton Galaxie est géré à part
+  // le bouton Galaxie n'a pas data-event, on le laisse tranquille
+  if (!ev) return;
 
   btn.addEventListener("click", () => {
     if (ev === "supernova") triggerSupernova();
@@ -1859,13 +1862,13 @@ toggleButton.addEventListener("click", () => {
   toggleButton.classList.toggle("active", invertFlow);
 });
 
-/* Galaxie : bouton = création immédiate (aléatoire) */
 galaxyBtn.addEventListener("click", () => {
   const strength = Math.random();
   createGalaxy(strength);
 });
 
-/* Sélection d’une galaxie par clic sur le canvas */
+/* Sélection galaxie */
+
 cosmicCanvas.addEventListener("pointerdown", (e) => {
   const rect = cosmicCanvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
@@ -1892,18 +1895,7 @@ cosmicCanvas.addEventListener("pointerdown", (e) => {
   }
 });
 
-/* Souris / touch pour la répulsion */
-window.addEventListener("pointermove", (e) => {
-  if (isTouch && e.pointerType === "touch") {
-    mouseX = null;
-    mouseY = null;
-    return;
-  }
-  mouseX = e.clientX;
-  mouseY = e.clientY;
-});
-
-/* UPDATE & RENDU COSMIQUE */
+/* UPDATE PARTICULES FOND + GALAXIES + EVENTS */
 
 function updateParticles() {
   const centerX = cw / 2;
@@ -1924,31 +1916,33 @@ function updateParticles() {
     const dist = Math.sqrt(dx*dx + dy*dy) || 1;
 
     let swirlForce = 0.0006;
-    let gravForce  = -0.00015;
-    let maxSpeed   = 2.2;
+    let gravForce = -0.00015;
+    let maxSpeed = 2.2;
 
     if (cosmicMode === "nebula") {
       swirlForce = 0.0004;
-      gravForce  = -0.00005;
-      maxSpeed   = 1.4;
+      gravForce = -0.00005;
+      maxSpeed = 1.4;
     } else if (cosmicMode === "blackhole" && !bigCrunchGalaxy || (bigCrunchActive && !bigCrunchGalaxy)) {
       swirlForce = 0.0011;
-      gravForce  = -0.00045;
-      maxSpeed   = 3.5;
+      gravForce = -0.00045;
+      maxSpeed = 3.5;
     } else if (cosmicMode === "pulsar") {
       swirlForce = 0.0007;
-      gravForce  = -0.00020;
-      maxSpeed   = 2.4;
+      gravForce = -0.00020;
+      maxSpeed = 2.4;
     } else if (cosmicMode === "meteor") {
       swirlForce = 0.0004;
-      gravForce  = -0.00008;
-      maxSpeed   = 2.6;
+      gravForce = -0.00008;
+      maxSpeed = 2.6;
     }
 
-    if (invertFlow) swirlForce *= -1;
+    if (invertFlow) {
+      swirlForce *= -1;
+    }
 
     const axT = -dy * swirlForce;
-    const ayT =  dx * swirlForce;
+    const ayT = dx * swirlForce;
 
     let ax = axT + dx * gravForce;
     let ay = ayT + dy * gravForce;
@@ -1967,7 +1961,7 @@ function updateParticles() {
       }
     }
 
-    // bruit local
+    // bruit
     p.noiseOffset += 0.01;
     const noiseScaleLocal = (cosmicMode === "nebula" ? 0.01 : 0.004);
     ax += Math.cos(p.noiseOffset + time * 2) * noiseScaleLocal;
@@ -1980,7 +1974,7 @@ function updateParticles() {
       ay += (dy / dist) * pulsarKick;
     }
 
-    // supernova globale (sans galaxie ciblée)
+    // supernova globale (si aucune galaxie ciblée)
     if (supernovaActive && !supernovaGalaxy) {
       const phase = supernovaTimer / SUPER_MAX;
       const shock = 0.006 * (1 - phase);
@@ -1988,7 +1982,7 @@ function updateParticles() {
       ay += (dy / dist) * shock;
     }
 
-    // big crunch global (sans galaxie ciblée)
+    // big crunch global (si aucune galaxie ciblée)
     if (bigCrunchActive && !bigCrunchGalaxy) {
       const phase = bigCrunchTimer / CRUNCH_MAX;
       const extraG = -0.0006 * (0.2 + phase);
@@ -2018,7 +2012,7 @@ function updateParticles() {
     if (p.y < -50) p.y = ch + 50;
     if (p.y > ch + 50) p.y = -50;
 
-    let hue   = p.hueBase + Math.sin(p.noiseOffset + time * 2) * 25;
+    let hue = p.hueBase + Math.sin(p.noiseOffset + time * 2) * 25;
     let alpha = p.alpha;
 
     if (cosmicMode === "nebula") {
@@ -2032,11 +2026,13 @@ function updateParticles() {
       alpha *= 0.9;
     }
 
-    if (invertFlow) hue = 360 - hue;
+    if (invertFlow) {
+      hue = 360 - hue;
+    }
 
     const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 4);
-    grad.addColorStop(0, `hsla(${hue}, 90%, 80%, ${alpha})`);
-    grad.addColorStop(1, `hsla(${hue}, 90%, 50%, 0)`);
+    grad.addColorStop(0, "hsla(" + hue + ", 90%, 80%, " + alpha + ")");
+    grad.addColorStop(1, "hsla(" + hue + ", 90%, 50%, 0)");
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
@@ -2050,16 +2046,17 @@ function updateParticles() {
     drawPulsarFlash(centerX, centerY);
   }
 
+  // galaxies
   drawGalaxies();
 
-  // supernova flash
+  // supernova : flash global
   if (supernovaActive) {
     supernovaTimer++;
     const phase = supernovaTimer / SUPER_MAX;
     const alpha = 0.4 * Math.exp(-3 * phase);
     if (alpha > 0) {
       ctx.globalCompositeOperation = "screen";
-      ctx.fillStyle = `rgba(248,250,252,${alpha})`;
+      ctx.fillStyle = "rgba(248,250,252," + alpha + ")";
       ctx.fillRect(0, 0, cw, ch);
     }
     if (supernovaTimer > SUPER_MAX) {
@@ -2072,13 +2069,13 @@ function updateParticles() {
   if (bigBangFlash > 0) {
     const alpha = 0.6 * bigBangFlash;
     ctx.globalCompositeOperation = "screen";
-    ctx.fillStyle = `rgba(248,250,252,${alpha})`;
+    ctx.fillStyle = "rgba(248,250,252," + alpha + ")";
     ctx.fillRect(0, 0, cw, ch);
     bigBangFlash *= 0.85;
     if (bigBangFlash < 0.02) bigBangFlash = 0;
   }
 
-  // big crunch global
+  // big crunch progression pour le fond (si aucune galaxie ciblée)
   if (bigCrunchActive && !bigCrunchGalaxy) {
     bigCrunchTimer++;
     const phase = bigCrunchTimer / CRUNCH_MAX;
@@ -2104,7 +2101,8 @@ function updateParticles() {
   }
 }
 
-/* DESSIN DES GALAXIES */
+/* GALAXIES DRAW */
+
 function drawGalaxies() {
   if (!galaxies.length) return;
 
@@ -2119,6 +2117,7 @@ function drawGalaxies() {
     g.life++;
     g.rot += g.rotSpeed;
 
+    // mouvement de la galaxie
     g.cx += g.vx;
     g.cy += g.vy;
 
@@ -2146,6 +2145,7 @@ function drawGalaxies() {
         bigCrunchGalaxy = null;
         continue;
       }
+
       g.currentRadiusFactor = shrink;
     } else {
       g.currentRadiusFactor = 1;
@@ -2171,8 +2171,8 @@ function drawGalaxies() {
       const alpha = gp.alpha * brightnessFactor;
 
       const grad = ctx.createRadialGradient(x, y, 0, x, y, gp.size * 3.5);
-      grad.addColorStop(0, `hsla(${hue}, 90%, 78%, ${alpha})`);
-      grad.addColorStop(1, `hsla(${hue}, 90%, 45%, 0)`);
+      grad.addColorStop(0, "hsla(" + hue + ", 90%, 78%, " + alpha + ")");
+      grad.addColorStop(1, "hsla(" + hue + ", 90%, 45%, 0)");
       ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.arc(x, y, gp.size * 3.5, 0, Math.PI * 2);
@@ -2186,9 +2186,10 @@ function drawGalaxies() {
   ctx.restore();
 }
 
-/* METEORS */
+/* METEORS DRAW */
+
 function updateMeteors() {
-  if (!meteors.length) return;
+  if (meteors.length === 0) return;
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   for (const m of meteors) {
@@ -2198,7 +2199,7 @@ function updateMeteors() {
     const progress = m.life / m.maxLife;
     const alpha = Math.max(0, 1 - progress);
     const length = 40 + progress * 80;
-    ctx.strokeStyle = `hsla(${200 + progress*60}, 90%, 80%, ${alpha})`;
+    ctx.strokeStyle = "hsla(" + (200 + progress*60) + ", 90%, 80%, " + alpha + ")";
     ctx.lineWidth = 1.2;
     ctx.beginPath();
     ctx.moveTo(m.x, m.y);
@@ -2210,12 +2211,13 @@ function updateMeteors() {
 }
 
 /* PULSAR FLASH */
+
 function drawPulsarFlash(cx, cy) {
   const pulse = (Math.sin(pulsarPhase) * 0.5 + 0.5);
   const radius = 40 + pulse * 60;
   const alpha = 0.08 + pulse * 0.18;
   const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-  grad.addColorStop(0, `rgba(248,250,252,${alpha})`);
+  grad.addColorStop(0, "rgba(248,250,252," + alpha + ")");
   grad.addColorStop(1, "rgba(248,250,252,0)");
   ctx.fillStyle = grad;
   ctx.beginPath();
@@ -2223,15 +2225,18 @@ function drawPulsarFlash(cx, cy) {
   ctx.fill();
 }
 
-/* LOOP ANIM */
+/* LOOP */
+
 function loop() {
   updateParticles();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
-/* ÉTINCELLES CURSEUR */
+/* ÉTINCELLES */
+
 const sparkLayer = document.getElementById("sparkLayer");
+
 if (!isTouch) {
   const sparks = [];
   const maxSparks = 10;
@@ -2244,6 +2249,8 @@ if (!isTouch) {
   let lastMove = 0;
   window.addEventListener("pointermove", e => {
     const now = performance.now();
+    mouseX = e.clientX;
+    mouseY = e.clientY;
     if (now - lastMove < 20) return;
     lastMove = now;
     const x = e.clientX;
@@ -2251,7 +2258,7 @@ if (!isTouch) {
     const spark = sparks.reduce((a,b) => (a.life <= b.life ? a : b));
     spark.life = 1;
     spark.el.style.left = (x - 5) + "px";
-    spark.el.style.top  = (y - 5) + "px";
+    spark.el.style.top = (y - 5) + "px";
     spark.el.style.opacity = "1";
     spark.el.style.transform = "scale(1)";
     setTimeout(() => {
@@ -2260,257 +2267,56 @@ if (!isTouch) {
       spark.life = 0;
     }, 220);
   });
+} else {
+  window.addEventListener("pointermove", () => {
+    mouseX = null;
+    mouseY = null;
+  });
 }
 
 /* ========================= */
 /*        SLOT LE 642        */
 /* ========================= */
 
-const balanceEl   = document.getElementById("balance");
+const balanceEl = document.getElementById("balance");
 const lastResultEl = document.getElementById("lastResult");
-const bannerEl    = document.getElementById("banner");
-const spinBtn     = document.getElementById("spinBtn");
-const toast       = document.getElementById("toast");
+const bannerEl = document.getElementById("banner");
+const spinBtn = document.getElementById("spinBtn");
+const toast = document.getElementById("toast");
 const overlayLose = document.getElementById("overlayLose");
-const btnReset    = document.getElementById("btnReset");
-const betValueEl  = document.getElementById("betValue");
+const btnReset = document.getElementById("btnReset");
+const betValueEl = document.getElementById("betValue");
 
-const slotPill    = document.getElementById("slotPill");
+const slotPill = document.getElementById("slotPill");
 const codeSection = document.getElementById("codeSection");
-const codeInput   = document.getElementById("codeInput");
-const codeSubmit  = document.getElementById("codeSubmit");
-const vaultBtn    = document.getElementById("vaultBtn");
+const codeInput = document.getElementById("codeInput");
+const codeSubmit = document.getElementById("codeSubmit");
 
 const overlayReward = document.getElementById("overlayReward");
-const rewardTitleEl  = document.getElementById("rewardTitle");
-const rewardCodeEl   = document.getElementById("rewardCode");
-const rewardBodyEl   = document.getElementById("rewardBody");
-const rewardPreviewEl= document.getElementById("rewardPreview");
+const rewardTitleEl = document.getElementById("rewardTitle");
+const rewardCodeEl = document.getElementById("rewardCode");
+const rewardBodyEl = document.getElementById("rewardBody");
+const rewardPreviewEl = document.getElementById("rewardPreview");
 const rewardFooterEl = document.getElementById("rewardFooter");
-const rewardCloseBtn = document.getElementById("rewardClose");
+const rewardClose = document.getElementById("rewardClose");
 
-const overlayVault  = document.getElementById("overlayVault");
-const vaultListEl   = document.getElementById("vaultList");
-const vaultCloseBtn = document.getElementById("vaultClose");
+const vaultBtn = document.getElementById("vaultBtn");
+const overlayVault = document.getElementById("overlayVault");
+const vaultList = document.getElementById("vaultList");
+const vaultClose = document.getElementById("vaultClose");
 
 let balance = 1250;
-let bet     = 10;
+let bet = 10;
 let spinning = false;
+let codeModeUnlocked = false;
 
 const reelsEls = [
   document.getElementById("reel0"),
   document.getElementById("reel1"),
-  document.getElementById("reel2")
+  document.getElementById("reel2"),
 ];
 
-/* VAULT / CODES SECRETS */
-
-const VAULT_KEY        = "goo-vault-1250";
-const VAULT_UNLOCK_KEY = "goo-vault-unlocked-1250";
-
-let vaultItems   = [];
-let vaultUnlocked = false;
-
-/* Table de codes : à modifier par toi */
-const secretCombos = {
-  "125": {
-    title: "Dossier 12,50 – Aperçu factice",
-    body: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut vehicula, velit at varius porta, lorem ipsum tincidunt metus.",
-    preview: "Aperçu factice d’un dossier PDF ou d’un mini-site secret 12,50. Lorem ipsum et compagnies.",
-    kind: "reward"
-  },
-  "777": {
-    title: "Jackpot pédagogique",
-    body: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent blandit arcu nec dui mattis, nec facilisis justo volutpat.",
-    preview: "Ici tu pourras, plus tard, brancher une vraie ressource (vidéo, tutoriel, etc.).",
-    kind: "reward"
-  },
-  "242": {
-    title: "Coffre fort déverrouillé",
-    body: "La combinaison 242 ouvre un espace persistant côté navigateur. Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-    preview: "Aperçu factice d’un \"hub\" de récompenses. Plus tard : vraie bibliothèque de contenus.",
-    kind: "vault"
-  }
-};
-
-function loadVaultFromStorage() {
-  try {
-    const raw = localStorage.getItem(VAULT_KEY);
-    if (raw) {
-      vaultItems = JSON.parse(raw) || [];
-    }
-  } catch(e) { vaultItems = []; }
-
-  try {
-    const unlocked = localStorage.getItem(VAULT_UNLOCK_KEY);
-    vaultUnlocked = unlocked === "1";
-  } catch(e) { vaultUnlocked = false; }
-
-  refreshVaultUI();
-}
-
-function saveVaultToStorage() {
-  try {
-    localStorage.setItem(VAULT_KEY, JSON.stringify(vaultItems));
-    localStorage.setItem(VAULT_UNLOCK_KEY, vaultUnlocked ? "1" : "0");
-  } catch(e) {}
-}
-
-function refreshVaultUI() {
-  // bouton coffre fort
-  if (vaultUnlocked) {
-    vaultBtn.disabled = false;
-    vaultBtn.classList.add("unlocked");
-  } else {
-    vaultBtn.disabled = true;
-    vaultBtn.classList.remove("unlocked");
-  }
-
-  if (!vaultListEl) return;
-
-  vaultListEl.innerHTML = "";
-  if (!vaultItems.length) {
-    const empty = document.createElement("div");
-    empty.className = "vault-empty";
-    empty.textContent = "Rien dans le coffre pour l’instant. Cherche encore des codes.";
-    vaultListEl.appendChild(empty);
-    return;
-  }
-
-  vaultItems.forEach(item => {
-    const wrap = document.createElement("div");
-    wrap.className = "vault-item";
-
-    const header = document.createElement("div");
-    header.className = "vault-item-header";
-
-    const codeSpan = document.createElement("div");
-    codeSpan.className = "vault-item-code";
-    codeSpan.textContent = `Code : ${item.code}`;
-
-    const dateSpan = document.createElement("div");
-    dateSpan.style.fontSize = "9px";
-    dateSpan.style.color = "rgba(148,163,184,0.9)";
-    dateSpan.textContent = item.dateLabel || "";
-
-    header.appendChild(codeSpan);
-    header.appendChild(dateSpan);
-
-    const title = document.createElement("div");
-    title.style.fontWeight = "600";
-    title.style.marginBottom = "3px";
-    title.textContent = item.title;
-
-    const body = document.createElement("div");
-    body.style.fontSize = "10px";
-    body.style.color = "var(--text-soft)";
-    body.textContent = item.preview;
-
-    wrap.appendChild(header);
-    wrap.appendChild(title);
-    wrap.appendChild(body);
-    vaultListEl.appendChild(wrap);
-  });
-}
-
-function addToVault(code, def) {
-  const now = new Date();
-  const dateLabel = now.toLocaleString(undefined, {
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit"
-  });
-
-  vaultItems.push({
-    code,
-    title: def.title,
-    preview: def.preview,
-    dateLabel
-  });
-  saveVaultToStorage();
-  refreshVaultUI();
-}
-
-/* Affichage de la modale de récompense */
-function showRewardModal(code, def) {
-  rewardTitleEl.textContent   = def.title;
-  rewardCodeEl.textContent    = `Code : ${code}`;
-  rewardBodyEl.textContent    = def.body;
-  rewardPreviewEl.textContent = def.preview;
-  rewardFooterEl.textContent  = "Cette récompense a été ajoutée à ton coffre fort (stockage local factice).";
-
-  overlayReward.style.display = "flex";
-}
-
-/* Gestion d’un code secret (quel que soit l’endroit : spin ou saisie manuelle) */
-function handleSecretCombo(code) {
-  if (code === "642") return; // 642 reste réservé à la LOOZE ULTIME
-
-  const def = secretCombos[code];
-  if (!def) return;
-
-  if (def.kind === "vault") {
-    vaultUnlocked = true;
-    saveVaultToStorage();
-    refreshVaultUI();
-    addToVault(code, def);
-    showRewardModal(code, def);
-    showToast("Coffre fort déverrouillé. Bienvenue dans la dimension 242.");
-  } else {
-    addToVault(code, def);
-    showRewardModal(code, def);
-    showToast(`Récompense ajoutée au coffre : ${code}.`);
-  }
-}
-
-/* UI coffre & modales */
-vaultBtn.addEventListener("click", () => {
-  if (!vaultUnlocked) {
-    showToast("Le coffre est encore verrouillé. La rumeur parle d’un certain 242…");
-    return;
-  }
-  overlayVault.style.display = "flex";
-});
-
-vaultCloseBtn.addEventListener("click", () => {
-  overlayVault.style.display = "none";
-});
-
-rewardCloseBtn.addEventListener("click", () => {
-  overlayReward.style.display = "none";
-});
-
-/* Slot pill → active le mode code */
-let codeModeUnlocked = false;
-
-slotPill.addEventListener("click", () => {
-  codeModeUnlocked = !codeModeUnlocked;
-  if (codeModeUnlocked) {
-    slotPill.classList.add("unlocked");
-    codeSection.style.display = "block";
-    showToast("Mode code secret activé : tu peux entrer des combinaisons à la place du tirage.");
-  } else {
-    slotPill.classList.remove("unlocked");
-    codeSection.style.display = "none";
-    showToast("Mode code secret désactivé. Retour au spin classique.");
-  }
-});
-
-/* Saisie manuelle de code */
-codeSubmit.addEventListener("click", () => {
-  if (!codeModeUnlocked) {
-    showToast("Clique d’abord sur « LA LOOZE ULTIME » pour activer le mode code.");
-    return;
-  }
-  const raw = (codeInput.value || "").trim();
-  if (!raw || raw.length !== 3 || !/^[0-9]{3}$/.test(raw)) {
-    showToast("Le code doit être une séquence de 3 chiffres.");
-    return;
-  }
-  const digits = raw.split("").map(n => parseInt(n, 10));
-  resolveResult(digits, "code");
-});
-
-/* FONCTIONS UTIL SLOT */
+/* UTIL UI */
 
 function updateBalance(delta) {
   balance += delta;
@@ -2521,7 +2327,7 @@ function updateBalance(delta) {
 function setBanner(text, type = "info") {
   let color = "var(--text-soft)";
   if (type === "danger") color = "#fecaca";
-  if (type === "win")    color = "#bbf7d0";
+  if (type === "win") color = "#bbf7d0";
   bannerEl.style.color = color;
   bannerEl.innerHTML = text;
 }
@@ -2534,13 +2340,14 @@ function showToast(message) {
   }, 2400);
 }
 
-/* bip synthé */
+/* bip synthé (facultatif) */
+
 function beep(freq = 880, duration = 120) {
   if (!window.AudioContext && !window.webkitAudioContext) return;
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     const ctxAudio = new AudioCtx();
-    const osc  = ctxAudio.createOscillator();
+    const osc = ctxAudio.createOscillator();
     const gain = ctxAudio.createGain();
     osc.type = "triangle";
     osc.frequency.value = freq;
@@ -2591,7 +2398,7 @@ function spin() {
 
       if (index === reelsEls.length - 1) {
         setTimeout(() => {
-          resolveResult(finalDigits, "spin");
+          resolveResult(finalDigits);
         }, 80);
       }
     }, spinTimes[index]);
@@ -2622,13 +2429,10 @@ function triggerRandomSurprise(digits) {
   }
 }
 
-/* Résolution résultat (spin ou code) */
-function resolveResult(d, origin = "spin") {
+function resolveResult(d) {
   const [a, b, c] = d;
-  const codeStr = `${a}${b}${c}`;
-  lastResultEl.textContent = codeStr;
+  lastResultEl.textContent = "" + a + b + c;
 
-  // LOOZE ULTIME
   if (a === 6 && b === 4 && c === 2) {
     overlayLose.style.display = "flex";
     triggerBigCrunch();
@@ -2644,10 +2448,9 @@ function resolveResult(d, origin = "spin") {
   let delta = 0;
 
   if (a === b && b === c) {
-    // triple → jackpot
     delta = 250;
     type = "win";
-    message = `JACKPOT stellaire : ${codeStr}. +${delta} jetons, Supernova recommandée.`;
+    message = "JACKPOT stellaire : " + a + b + c + ". +" + delta + " jetons, Supernova recommandée.";
     triggerSupernova();
     beep(880, 160);
     beep(1200, 200);
@@ -2660,29 +2463,29 @@ function resolveResult(d, origin = "spin") {
     if (has6 && has4 && has2) {
       delta = -20;
       type = "danger";
-      message = `Combo toxique (tous les chiffres maudits, mais pas alignés) : ${codeStr}. -20 jetons de sueur froide.`;
+      message = "Combo toxique (tous les chiffres maudits, mais pas alignés) : " + a + b + c + ". -20 jetons de sueur froide.";
       beep(260, 140);
     } else if ((a + b + c) % 3 === 0) {
       delta = 15;
       type = "win";
-      message = `Alignement cosmique (somme divisible par 3) : +${delta} jetons. Big Bang bonus assuré.`;
+      message = "Alignement cosmique (somme divisible par 3) : +" + delta + " jetons. Big Bang bonus assuré.";
       triggerBigBang();
       beep(720, 120);
     } else if (a === 6 || b === 4 || c === 2) {
       delta = 0;
       type = "info";
-      message = `Un des chiffres maudits est sorti (${codeStr}). Le vide quantique t’observe, mais te laisse passer.`;
+      message = "Un des chiffres maudits est sorti (" + a + b + c + "). Le vide quantique t’observe, mais te laisse passer.";
     } else {
       const rnd = Math.random();
       if (rnd < 0.25) {
         delta = 10;
         type = "win";
-        message = `Mini win galactique : +${delta} jetons. De quoi alimenter un prochain spin.`;
+        message = "Mini win galactique : +" + delta + " jetons. De quoi alimenter un prochain spin.";
         beep(660, 100);
       } else {
         delta = 0;
         type = "info";
-        message = `Rien de spécial sur ${codeStr}. Les galaxies tournent, le casino sourit.`;
+        message = "Rien de spécial sur " + a + b + c + ". Les galaxies tournent, le casino sourit.";
       }
     }
   }
@@ -2690,14 +2493,201 @@ function resolveResult(d, origin = "spin") {
   if (delta !== 0) updateBalance(delta);
   setBanner(message, type);
   triggerRandomSurprise(d);
-
-  // codes secrets (spin OU saisie directe)
-  handleSecretCombo(codeStr);
-
   spinning = false;
 }
 
-/* Events slot */
+/* ========= MODE CODE SECRET ========= */
+
+const VAULT_KEY = "univers1250_vault";
+
+function loadVaultFromStorage() {
+  let items = [];
+  try {
+    const raw = localStorage.getItem(VAULT_KEY);
+    if (raw) {
+      items = JSON.parse(raw);
+    }
+  } catch(e) {
+    items = [];
+  }
+  renderVault(items);
+}
+
+function saveVaultToStorage(items) {
+  try {
+    localStorage.setItem(VAULT_KEY, JSON.stringify(items));
+  } catch(e) {}
+}
+
+function addRewardToVault(entry) {
+  let items = [];
+  try {
+    const raw = localStorage.getItem(VAULT_KEY);
+    if (raw) items = JSON.parse(raw);
+  } catch(e) {
+    items = [];
+  }
+  items.push(entry);
+  saveVaultToStorage(items);
+  renderVault(items);
+}
+
+function renderVault(items) {
+  vaultList.innerHTML = "";
+  if (!items.length) {
+    const empty = document.createElement("div");
+    empty.className = "vault-empty";
+    empty.textContent = "Rien dans le coffre pour l’instant. Cherche encore des codes.";
+    vaultList.appendChild(empty);
+    vaultBtn.disabled = true;
+    vaultBtn.classList.remove("unlocked");
+    return;
+  }
+  items.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "vault-item";
+    const header = document.createElement("div");
+    header.className = "vault-item-header";
+
+    const codeSpan = document.createElement("div");
+    codeSpan.className = "vault-item-code";
+    codeSpan.textContent = "Code " + item.code;
+
+    const tagSpan = document.createElement("div");
+    tagSpan.style.fontSize = "10px";
+    tagSpan.style.color = "rgba(190,242,100,0.9)";
+    tagSpan.textContent = item.tag || "Récompense";
+
+    header.appendChild(codeSpan);
+    header.appendChild(tagSpan);
+
+    const body = document.createElement("div");
+    body.textContent = item.title || "Récompense sans titre.";
+
+    div.appendChild(header);
+    div.appendChild(body);
+    vaultList.appendChild(div);
+  });
+  vaultBtn.disabled = false;
+  vaultBtn.classList.add("unlocked");
+}
+
+/* TABLE DES CODES */
+
+function getRewardForCode(code) {
+  // 242 = coffre fort
+  if (code === "242") {
+    return {
+      code,
+      title: "Coffre fort débloqué",
+      body: "Tu as trouvé la combinaison 242. Dans un futur pas si lointain, ce coffre servira à stocker de vrais artefacts (PDF, images, extraits de jeux, etc.).",
+      preview: "Aperçu factice : visualisation de ton coffre, stats de progression, inventaire complet de tes trouvailles.",
+      footer: "Cette entrée a été ajoutée à ton coffre fort. Tu peux la retrouver via le bouton Coffre fort.",
+      tag: "Coffre"
+    };
+  }
+
+  if (code === "125") {
+    return {
+      code,
+      title: "Dossier 12,50 – Aperçu classé secret",
+      body: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin dignissim, mauris eu vestibulum auctor, sem nulla posuere massa, vitae lobortis sem justo non lorem.",
+      preview: "Aperçu factice : capture de dossier ultra confidentiel, graphiques d’impact, timeline de l’expérience 12,50.",
+      footer: "Encore une récompense purement cosmétique pour l’instant… mais qui pourra servir de placeholder à un vrai contenu.",
+      tag: "Dossier"
+    };
+  }
+
+  if (code === "777") {
+    return {
+      code,
+      title: "Jackpot pédagogique",
+      body: "Suspendisse potenti. Sed posuere, ex in consequat tempus, lectus diam suscipit odio, eget viverra augue arcu sed elit.",
+      preview: "Aperçu factice : vidéo tutorielle, cheat sheet ou guide ultra simplifié qui s’affichera ici un jour.",
+      footer: "Jackpot symbolique. Le coffre garde ça bien au chaud pour une prochaine itération du jeu.",
+      tag: "Jackpot"
+    };
+  }
+
+  // code générique factice
+  return {
+    code,
+    title: "Récompense générique",
+    body: "Code inconnu mais accepté. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras interdum, ipsum in convallis pulvinar, sapien libero semper est.",
+    preview: "Aperçu factice : tu pourras mapper ce code vers n’importe quel contenu (PDF, image, page web…).",
+    footer: "Même les codes non prévus sont stockés dans le coffre. Tu pourras décider plus tard de ce qu’ils débloquent vraiment.",
+    tag: "Custom"
+  };
+}
+
+/* LOGIQUE CODE SECRET */
+
+slotPill.addEventListener("click", () => {
+  if (!codeModeUnlocked) {
+    codeModeUnlocked = true;
+    slotPill.classList.add("unlocked");
+    codeSection.style.display = "block";
+    showToast("Mode code secret débloqué : tu peux entrer des combinaisons.");
+    setBanner("Mode code secret activé. Les chiffres peuvent devenir des clés.", "info");
+  } else {
+    // on pourrait toggler l’affichage, mais on le laisse ouvert
+    showToast("Le mode code secret est déjà actif.");
+  }
+});
+
+function openRewardModal(reward) {
+  rewardTitleEl.textContent = reward.title;
+  rewardCodeEl.textContent = "Code : " + reward.code;
+  rewardBodyEl.textContent = reward.body;
+  rewardPreviewEl.textContent = reward.preview;
+  rewardFooterEl.textContent = reward.footer;
+  overlayReward.style.display = "flex";
+}
+
+rewardClose.addEventListener("click", () => {
+  overlayReward.style.display = "none";
+});
+
+function handleCodeSubmit() {
+  const raw = (codeInput.value || "").trim();
+  const code = raw.replace(/\D/g, "").padStart(3, "0");
+  if (!code || code.length !== 3) {
+    showToast("Code invalide. Utilise exactement 3 chiffres.");
+    return;
+  }
+
+  codeInput.value = code;
+  const reward = getRewardForCode(code);
+
+  addRewardToVault({
+    code: reward.code,
+    title: reward.title,
+    tag: reward.tag
+  });
+
+  openRewardModal(reward);
+  showToast("Récompense enregistrée dans le coffre fort.");
+}
+
+codeSubmit.addEventListener("click", handleCodeSubmit);
+codeInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    handleCodeSubmit();
+  }
+});
+
+/* COFFRE FORT MODAL */
+
+vaultBtn.addEventListener("click", () => {
+  overlayVault.style.display = "flex";
+});
+
+vaultClose.addEventListener("click", () => {
+  overlayVault.style.display = "none";
+});
+
+/* EVENTS SLOT */
+
 spinBtn.addEventListener("click", spin);
 
 btnReset.addEventListener("click", () => {
@@ -2707,6 +2697,10 @@ btnReset.addEventListener("click", () => {
   setBanner("Nouveau crédit : 1250 jetons. Rappelle-toi : tout sauf 642.", "info");
 });
 
-/* init vault */
-loadVaultFromStorage();
+/* INIT VAULT */
 
+loadVaultFromStorage();
+</script>
+
+</body>
+</html>
