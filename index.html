@@ -22,11 +22,14 @@ body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text);
   background: #020617;
-  /* MOBILE FIRST : on laisse scroller, on évite les coupures */
+
+  /* IMPORTANT : on laisse scroller la page */
+  display: block;
   overflow-x: hidden;
   overflow-y: auto;
-  display: block;
-  padding: 16px 10px 96px; /* espace pour le pupitre au bas de l’écran */
+
+  /* marge en bas pour que le slot ne soit pas caché par le pupitre */
+  padding: 16px 10px 96px;
 }
 
 
@@ -119,12 +122,12 @@ body {
 .wrapper {
   position: relative;
   z-index: 4;
-  /* mobile-first : pleine largeur, mais limitée */
   width: 100%;
   max-width: 520px;
-  margin: 40px auto 0;
-  padding: 0 4px 24px;
+  margin: 32px auto 0;
+  padding: 0 12px 24px;
 }
+
 
 
 /* PUPITRE COSMIQUE (boutons) */
@@ -145,12 +148,14 @@ body {
   box-shadow: 0 16px 40px rgba(0,0,0,0.8);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  /* pour le mobile : ne dépasse jamais l’écran */
+
+  /* mobile friendly */
   width: calc(100% - 24px);
   max-width: 560px;
   box-sizing: border-box;
   justify-content: center;
 }
+
 
 
 .cosmic-btn {
